@@ -7,6 +7,9 @@ local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main
 local ui = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 
+--events
+
+--common
 local lp = game.Players.LocalPlayer
 local ccam = workspace.CurrentCamera
 local mouse = lp:GetMouse()
@@ -35,9 +38,32 @@ local tabs = {
 }
 
 local aimGroup = tabs.main:AddLeftGroupbox('aim')
+local exGroup = tabs.main:AddLeftGroupbox('exploits')
 local visGroup = tabs.main:AddRightGroupbox('visuals')
 local stsGroup = tabs.main:AddRightGroupbox('settings')
 local uiGroup = tabs.main:AddRightGroupbox('UI')
+
+--ex
+exGroup:AddToggle('spdToggle', {
+    Text = 'enable walkspeed',
+    Default = false,
+    Tooltip = nil,
+})
+
+exGroup:AddSlider('spdSlider', {
+    Text = 'speed amount',
+    Default = 30,
+    Min = 0,
+    Max = 50,
+    Rounding = 1,
+    Compact = false,
+})
+
+exGroup:AddToggle('jumpToggle', {
+    Text = 'infinite jump',
+    Default = false,
+    Tooltop = nil,
+})
 
 --vis
 visGroup:AddToggle('espToggle', {
@@ -76,9 +102,9 @@ aimGroup:AddDropdown('bone', {
 
 aimGroup:AddSlider('smoothSlider', {
     Text = 'smoothing',
-    Default = 0.01,
+    Default = 1,
     Min = 0.01,
-    Max = 0.5,
+    Max = 1,
     Rounding = 2,
     Compact = false,
 })
@@ -114,11 +140,27 @@ Toggles.espToggle:OnChanged(function()
 end)
 
 Sense.teamSettings.enemy.chamsVisibleOnly = true
-Sense.teamSettings.enemy.chamsFillColor = {Color3.fromRGB(255, 61, 123), .5}
+Sense.teamSettings.enemy.chamsFillColor = {Color3.fromRGB(255, 61, 123), .8}
 
 Toggles.chamsToggle:OnChanged(function()
     Sense.teamSettings.enemy.chams = Toggles.chamsToggle.Value
 end)
+
+--save function, buggy on siege but good elsewhere
+local function isVisible(v)
+    local c = v
+    local lc = lp.Character
+
+    if not (c or lc) then return end
+
+    local cRoot = c:FindFirstChild("Humanoid").RootPart
+
+    local casts, ignores = {cRoot.Position, lc, c}, {lc, c}
+
+    local obsc = #ccam.GetPartsObscuringTarget(ccam, casts, ignores)
+
+    return ((obsc == 0 and true) or (obsc > 0 and false))
+end
 
 local function getClosest()
 	local trg = nil
@@ -154,7 +196,7 @@ end
 runService.RenderStepped:Connect(function()
     if Toggles.aimToggle.Value then
         if Toggles.fovToggle.Value then
-            if Toggles.fovDrawToggle then fovCircle.Visible = true else fovCircle.Visible = false end
+            if Toggles.fovDrawToggle.Value then fovCircle.Visible = true else fovCircle.Visible = false end
             fovCircle.Radius = Options.fovSlider.Value
         else
             fovCircle.Radius = 1000
@@ -171,6 +213,16 @@ runService.RenderStepped:Connect(function()
                 end
             end
         end
+    end
+
+    if Toggles.spdToggle.Value and lp.Character then
+        lp.Character.Humanoid.WalkSpeed = Options.spdSlider.Value
+    end
+end)
+
+game:GetService('UserInputService').JumpRequest:Connect(function()
+    if Toggles.jumpToggle.Value then
+        lp.Character:FindFirstChild('Humanoid'):ChangeState('Jumping')
     end
 end)
 
