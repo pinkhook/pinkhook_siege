@@ -1,0 +1,187 @@
+--pinkhook siege
+
+-- libs
+local Sense = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Sirius/request/library/sense/source.lua'))()
+
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local ui = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+
+local lp = game.Players.LocalPlayer
+local ccam = workspace.CurrentCamera
+local mouse = lp:GetMouse()
+local runService = game:GetService('RunService')
+local shouldAim = false
+local fovCircle = Drawing.new('Circle')
+fovCircle.Visible = false
+fovCircle.Radius = 1000
+fovCircle.Color = Color3.new(1,1,1)
+fovCircle.Thickness = 1
+fovCircle.Filled = false
+fovCircle.Transparency = 1
+
+fovCircle.Position = Vector2.new(ccam.ViewportSize.X / 2, ccam.ViewportSize.Y / 2)
+
+local window = ui:CreateWindow({
+    Title = 'pinkhook | Operations: Siege',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2,
+})
+
+local tabs = {
+    main = window:AddTab('main'),
+}
+
+local aimGroup = tabs.main:AddLeftGroupbox('aim')
+local visGroup = tabs.main:AddRightGroupbox('visuals')
+local stsGroup = tabs.main:AddRightGroupbox('settings')
+local uiGroup = tabs.main:AddRightGroupbox('UI')
+
+--vis
+visGroup:AddToggle('espToggle', {
+    Text = 'enable ESP',
+    Default = false,
+    Tooltip = nil,
+})
+
+visGroup:AddToggle('chamsToggle', {
+    Text = 'enable visible chams',
+    Default = false,
+    Tooltip = nil,
+})
+
+--aim
+aimGroup:AddToggle('aimToggle', {
+    Text = 'enable aimbot',
+    Default = false,
+    Tooltip = nil,
+})
+
+aimGroup:AddLabel('aim key'):AddKeyPicker('AimKey', {
+    Default = 'MB2',
+    SyncToggleState = false,
+    Mode = 'Hold',
+    Text = 'Aim Key Held',
+    NoUI = false,
+})
+
+aimGroup:AddDropdown('bone', {
+    Values = { 'head', 'root' },
+    Default = 1,
+    Multi = false,
+    Text = 'aim bone',
+})
+
+aimGroup:AddSlider('smoothSlider', {
+    Text = 'smoothing',
+    Default = 0.01,
+    Min = 0.01,
+    Max = 0.5,
+    Rounding = 2,
+    Compact = false,
+})
+
+aimGroup:AddToggle('fovToggle', {
+    Text = 'enable fov',
+    Default = false,
+    Tooltip = nil,
+})
+
+aimGroup:AddToggle('fovDrawToggle', {
+    Text = 'draw fov',
+    Default = true,
+    Tooltip = nil,
+})
+
+aimGroup:AddSlider('fovSlider', {
+    Text = 'fov radius',
+    Default = 30,
+    Min = 0,
+    Max = 1000,
+    Rounding = 1,
+    Compact = false,
+})
+
+Toggles.espToggle:OnChanged(function()
+    Sense.teamSettings.enemy.enabled = Toggles.espToggle.Value
+    Sense.teamSettings.enemy.box = Toggles.espToggle.Value
+    Sense.teamSettings.enemy.boxColor[1] = Color3.new(1,1,1)
+    Sense.teamSettings.enemy.healthBar = Toggles.espToggle.Value
+    Sense.teamSettings.enemy.name = Toggles.espToggle.Value
+    Sense.teamSettings.enemy.distance = Toggles.espToggle.Value
+end)
+
+Sense.teamSettings.enemy.chamsVisibleOnly = true
+Sense.teamSettings.enemy.chamsFillColor = {Color3.fromRGB(255, 61, 123), .5}
+
+Toggles.chamsToggle:OnChanged(function()
+    Sense.teamSettings.enemy.chams = Toggles.chamsToggle.Value
+end)
+
+local function getClosest()
+	local trg = nil
+	local distance = math.huge
+	for _,v in next, game.Players:GetPlayers() do
+		if v and v~= lp and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("Humanoid").RootPart and v.Team ~= lp.Team then
+			if lp.Character then
+                local ch = v.Character
+                local position = nil
+                
+                if Options.bone.Value == 'head' then
+                    position = ch.Head.Position
+                else
+                    position = ch:FindFirstChild('Humanoid').RootPart.Position
+                end
+
+                local part_pos, is_onscreen = ccam:WorldToViewportPoint(position)
+
+                if is_onscreen then
+                    local mag = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(part_pos.X, part_pos.Y)).Magnitude
+
+                    if mag < distance and mag < fovCircle.Radius then
+                        distance = mag
+                        trg = ch
+                    end
+                end
+			end
+		end
+	end
+	return trg
+end
+
+runService.RenderStepped:Connect(function()
+    if Toggles.aimToggle.Value then
+        if Toggles.fovToggle.Value then
+            if Toggles.fovDrawToggle then fovCircle.Visible = true else fovCircle.Visible = false end
+            fovCircle.Radius = Options.fovSlider.Value
+        else
+            fovCircle.Radius = 1000
+        end
+
+        if Options.AimKey:GetState() then
+            local target = getClosest()
+
+            if target and target:FindFirstChild('Humanoid').Health > 0 then
+                if Options.bone.Value == 'head' then
+                    ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target.Head.Position), Options.smoothSlider.Value)
+                else
+                    ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target:FindFirstChild('Humanoid').RootPart.Position), Options.smoothSlider.Value)
+                end
+            end
+        end
+    end
+end)
+
+stsGroup:AddButton('Unload', function() ui:Unload() end)
+stsGroup:AddLabel('menu key'):AddKeyPicker('menuKey', { Default = 'End', NoUI = true, Text = 'menu keybind' })
+ui.ToggleKeybind = Options.menuKey
+
+ui:SetWatermarkVisibility(true)
+ui:SetWatermark('pinkhook | Operations: Siege')
+
+ThemeManager:SetLibrary(ui)
+ThemeManager:ApplyToGroupbox(uiGroup)
+
+Sense.Load()
