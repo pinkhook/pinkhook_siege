@@ -27,7 +27,7 @@ fovCircle.Transparency = 1
 fovCircle.Position = Vector2.new(ccam.ViewportSize.X / 2, ccam.ViewportSize.Y / 2)
 
 local window = ui:CreateWindow({
-    Title = 'pinkhook | Operations: Siege',
+    Title = 'pinkhook | Universal',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -153,6 +153,11 @@ Toggles.chamsToggle:OnChanged(function()
     Sense.teamSettings.enemy.chams = Toggles.chamsToggle.Value
 end)
 
+local function camLook(p)
+    local ray = ccam:ViewportPointToRay(p.X, p.Y)
+    ccam.CFrame = CFrame.lookAt(ccam.CFrame.Position, ray.Origin + ray.Direction)
+end
+
 local function isVisible(v)
     local c = v
     local lc = lp.Character
@@ -214,13 +219,12 @@ runService.RenderStepped:Connect(function()
 
         if Options.AimKey:GetState() then
             local target = getClosest()
-
-            if target and target:FindFirstChild('Humanoid').Health > 0 then
-                if Options.bone.Value == 'head' then
-                    ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target.Head.Position), Options.smoothSlider.Value)
-                else
-                    ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target:FindFirstChild('Humanoid').RootPart.Position), Options.smoothSlider.Value)
-                end
+             if target and target:FindFirstChild('Humanoid').Health > 0 then
+                 if Options.bone.Value == 'head' then
+                     ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target.Head.Position), Options.smoothSlider.Value)
+                 else
+                     ccam.CFrame = ccam.CFrame:Lerp(CFrame.new(ccam.CFrame.Position, target:FindFirstChild('Humanoid').RootPart.Position), Options.smoothSlider.Value)
+                 end
             end
         end
     end
